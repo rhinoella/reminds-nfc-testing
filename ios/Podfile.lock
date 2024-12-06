@@ -1,22 +1,22 @@
 PODS:
   - Flutter (1.0.0)
-  - nfc_manager (0.0.1):
+  - flutter_nfc_kit (2.0.0):
     - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - nfc_manager (from `.symlinks/plugins/nfc_manager/ios`)
+  - flutter_nfc_kit (from `.symlinks/plugins/flutter_nfc_kit/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  nfc_manager:
-    :path: ".symlinks/plugins/nfc_manager/ios"
+  flutter_nfc_kit:
+    :path: ".symlinks/plugins/flutter_nfc_kit/ios"
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  nfc_manager: d7da7cb781f7744b94df5fe9dbca904ac4a0939e
+  flutter_nfc_kit: 965c98c3fa68f5609f1cc89abb968fe1b8ffdbaa
 
-PODFILE CHECKSUM: 819463e6a0290f5a72f145ba7cde16e8b6ef0796
+PODFILE CHECKSUM: a57f30d18f102dd3ce366b1d62a55ecbef2158e5
 
 COCOAPODS: 1.15.2

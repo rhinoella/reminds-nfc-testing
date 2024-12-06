@@ -37,7 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   mqtt_client: ^10.5.1
   provider: ^6.1.2
-  nfc_manager: ^3.5.0
+  flutter_nfc_kit: ^3.5.2
 
 dev_dependencies:
   flutter_test:

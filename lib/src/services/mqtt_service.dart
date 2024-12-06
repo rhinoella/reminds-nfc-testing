@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 
 class MqttService {
-  final String project = 'ReMINDS';
+  final String project = 'ReMINDS1';
   final MqttQos subscribeQos = MqttQos.atLeastOnce;
   final MqttQos publishQos = MqttQos.atLeastOnce;
   final String brokerDomain = 'sapphirewearables.com';
