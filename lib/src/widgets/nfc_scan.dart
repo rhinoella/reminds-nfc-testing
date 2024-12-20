@@ -5,6 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:ndef/ndef.dart';
 import 'package:reminds_flutter/src/utils/testNfcData.dart';
+import '../nfc/nfc_bloc.dart';
+import '../nfc/nfc_event.dart';
+import '../nfc/nfc_state.dart';
+import '../services/nfc_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class NfcScan extends StatefulWidget {
   @override
@@ -30,7 +35,7 @@ class _NfcScanState extends State<NfcScan> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     initPlatformState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   Future<void> initPlatformState() async {
@@ -166,60 +171,112 @@ class _NfcScanState extends State<NfcScan> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('NFC Flutter Kit Example App'),
-          bottom: TabBar(
-            tabs: <Widget>[Tab(text: 'Read'), Tab(text: 'Write')],
+    return BlocProvider(
+      create: (context) => NfcBloc(NfcService()),
+      child: MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(
+            title: const Text('NFC Flutter Kit Example App'),
+            bottom: TabBar(
+              tabs: const <Widget>[
+                Tab(text: 'Read'),
+                Tab(text: 'Write'),
+                Tab(text: 'Cycle')
+              ],
+              controller: _tabController,
+            ),
+          ),
+          body: TabBarView(
             controller: _tabController,
+            children: <Widget>[
+              // Read NFC Tab
+              Center(
+                child: BlocBuilder<NfcBloc, NfcState>(
+                  builder: (context, state) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        // Button for starting NFC scanning
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<NfcBloc>().add(ReadNfcTagEvent());
+                          },
+                          child: const Text("Start Scanning"),
+                        ),
+                        const SizedBox(height: 20),
+                        // Display result or error
+                        if (state is NfcScanningState)
+                          const Text('Scanning for NFC tags...')
+                        else if (state is NfcTagFoundState)
+                          Text('Tag Found: ${state.tagId}')
+                        else if (state is NfcTagReadState)
+                          Text('Read Data: ${state.data}')
+                        else if (state is NfcErrorState)
+                          Text('Error: ${state.errorMessage}'),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              // Write NFC Tab
+              Center(
+                child: BlocBuilder<NfcBloc, NfcState>(
+                  builder: (context, state) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        // Button for starting NFC writing
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<NfcBloc>().add(WriteNfcTagEvent());
+                          },
+                          child: const Text("Start Writing"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<NfcBloc>().add(FillNfcTagEvent());
+                          },
+                          child: const Text("Fill NFC"),
+                        ),
+                        const SizedBox(height: 20),
+                        // Display result or error
+                        if (state is NfcTagWriteState)
+                          Text('Write Result: ${state.status}')
+                        else if (state is NfcErrorState)
+                          Text('Error: ${state.errorMessage}'),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              // Cycle NFC Tab
+              Center(
+                child: BlocBuilder<NfcBloc, NfcState>(
+                  builder: (context, state) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        // Button for starting NFC cycling
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<NfcBloc>().add(CycleNfcTagEvent());
+                          },
+                          child: const Text("Start Cycling"),
+                        ),
+                        const SizedBox(height: 20),
+                        // Display result or error
+                        if (state is NfcTagCycleState)
+                          Text('Cycle Result: ${state.status}')
+                        else if (state is NfcErrorState)
+                          Text('Error: ${state.errorMessage}'),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
-        body: TabBarView(controller: _tabController, children: <Widget>[
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Text('Platform: $_platformVersion\nNFC: $_availability'),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: startPolling,
-                  child: Text('Start polling'),
-                ),
-                const SizedBox(height: 10),
-                _result.isNotEmpty
-                    ? Text('Result:$_result')
-                    : Text('No tag detected yet.'),
-              ],
-            ),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                ElevatedButton(
-                  onPressed: startWriting,
-                  child: Text("Start writing"),
-                ),
-                const SizedBox(height: 10),
-                Text('Write Result: $_writeResult'),
-              ],
-            ),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                ElevatedButton(
-                  onPressed: startCycling,
-                  child: Text("Start Cycling"),
-                ),
-                const SizedBox(height: 10),
-                Text('Write Result: $_writeResult'),
-              ],
-            ),
-          ),
-        ]),
       ),
     );
   }
