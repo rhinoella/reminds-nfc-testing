@@ -38,7 +38,8 @@ dependencies:
   mqtt_client: ^10.5.1
   provider: ^6.1.2
   flutter_nfc_kit: ^3.5.2
-  nfc_manager: ^3.5.0
+  nfc_manager:
+    path: 'deps/flutter-nfc-manager'
   flutter_bloc: ^8.1.6
 
 dev_dependencies:
