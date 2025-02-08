@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:ndef/ndef.dart';
 import 'dart:async';
@@ -6,14 +8,51 @@ import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:nfc_manager/platform_tags.dart';
 
+// Amount of blocks of 4 bytes in an 8K-byte nfc
+const totalBlocks = 2048;
+const totalBytes = 8192;
+
 class NfcService {
+  Map<int, Uint8List> blockData = {};
+
+  Future<Uint8List?> readMemory(Iso15693 isoTag, int targetBlock) async {
+    final res = await isoTag.readMultipleBlocks(
+        requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
+        blockNumber: 0,
+        numberOfBlocks: 64);
+
+    if (res.length != 64) {
+      throw Exception("Error reading tag");
+    }
+
+    final blockNumber = res[0].first;
+
+    if (blockNumber == targetBlock) {
+      Uint8List flatList = Uint8List.fromList([
+        ...res[0].sublist(1),
+        ...res.skip(1).expand((list) => list),
+      ]);
+
+      return flatList;
+    }
+
+    return null;
+  }
+
+  Future<void> writeBlockCommand(Iso15693 isoTag, int blockNumber) async {
+    isoTag.writeSingleBlock(
+        requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
+        blockNumber: 0,
+        dataBlock: Uint8List.fromList([blockNumber, 0, 0, 0]));
+  }
+
   Future<String?> readNfc() async {
     print("Searcing for NFC");
     NfcManager.instance.startSession(
       pollingOptions: <NfcPollingOption>{NfcPollingOption.iso15693},
       onDiscovered: (NfcTag tag) async {
         try {
-          print('NFC Tag Detected: ${tag.data}');
+          print('NFC Tag Detected: ${tag}');
           // Do something with an NfcTag instance.
           Iso15693? isoTag = Iso15693.from(tag);
 
@@ -21,11 +60,29 @@ class NfcService {
             throw Exception("Tag is not compatible with iso");
           }
 
-          final res = await isoTag.readMultipleBlocks(
+          var res = await isoTag.extendedReadMultipleBlocks(
               requestFlags: <Iso15693RequestFlag>{
                 Iso15693RequestFlag.highDataRate
               },
               blockNumber: 0,
+              numberOfBlocks: 64);
+
+          print(res);
+
+          res = await isoTag.extendedReadMultipleBlocks(
+              requestFlags: <Iso15693RequestFlag>{
+                Iso15693RequestFlag.highDataRate
+              },
+              blockNumber: 256,
+              numberOfBlocks: 64);
+
+          print(res);
+
+          res = await isoTag.extendedReadMultipleBlocks(
+              requestFlags: <Iso15693RequestFlag>{
+                Iso15693RequestFlag.highDataRate
+              },
+              blockNumber: 256 + 256,
               numberOfBlocks: 64);
 
           print(res);
@@ -51,7 +108,7 @@ class NfcService {
       pollingOptions: <NfcPollingOption>{NfcPollingOption.iso15693},
       onDiscovered: (NfcTag tag) async {
         try {
-          print('NFC Tag Detected: ${tag.data}');
+          print('NFC Tag Detected: ${tag}');
           // Do something with an NfcTag instance.
           Iso15693? isoTag = Iso15693.from(tag);
 
@@ -62,9 +119,16 @@ class NfcService {
           List<Uint8List> blockBytes = createSequentialDataBlocks(0, 4);
           print(blockBytes.length);
 
-          await isoTag.writeMultipleBlocks(requestFlags: <Iso15693RequestFlag>{
+          /*await isoTag.writeMultipleBlocks(requestFlags: <Iso15693RequestFlag>{
             Iso15693RequestFlag.highDataRate
-          }, blockNumber: 0, numberOfBlocks: 4, dataBlocks: blockBytes);
+          }, blockNumber: 0, numberOfBlocks: 4, dataBlocks: blockBytes);*/
+
+          final res1 = await isoTag.extendedWriteSingleBlock(
+              requestFlags: <Iso15693RequestFlag>{
+                Iso15693RequestFlag.highDataRate
+              },
+              blockNumber: 260,
+              dataBlock: Uint8List.fromList([6, 7, 8, 9]));
 
           await NfcManager.instance
               .stopSession(alertMessage: "Write Successful");
@@ -80,41 +144,44 @@ class NfcService {
 
   Future<void> fillNfc() async {
     if (!(await NfcManager.instance.isAvailable())) {
-      throw Exception("Unavailable");
+      throw Exception("NFC Unavailable");
     }
-    print("Searching for NFC");
+    print("Starting NFC write process");
 
-    NfcManager.instance.startSession(
+    int totalBlocks = 2048;
+    int blocksPerSession = 256;
+    int sessionIndex = 2;
+
+    print("Starting session ${sessionIndex + 1}");
+
+    await NfcManager.instance.startSession(
       pollingOptions: <NfcPollingOption>{NfcPollingOption.iso15693},
       onDiscovered: (NfcTag tag) async {
         try {
-          print('NFC Tag Detected: ${tag.data}');
-          // Do something with an NfcTag instance.
           Iso15693? isoTag = Iso15693.from(tag);
-
           if (isoTag == null) {
-            throw Exception("Tag is not compatible with iso");
+            throw Exception("Tag is not compatible with ISO 15693");
           }
 
-          // Define the total number of blocks
-          int totalBlocks = 256;
+          int startBlock = sessionIndex * blocksPerSession;
+          print(
+              "Writing session ${sessionIndex + 1}: Blocks $startBlock to ${startBlock + blocksPerSession - 1}");
 
-          // Write the blocks in batches of 4
-          for (int blockNumber = 0;
-              blockNumber < totalBlocks;
+          for (int blockNumber = startBlock;
+              blockNumber < startBlock + blocksPerSession;
               blockNumber += 4) {
-            int batchSize = (blockNumber + 4 <= totalBlocks)
+            int batchSize = (blockNumber + 4 <= startBlock + blocksPerSession)
                 ? 4
-                : totalBlocks - blockNumber;
+                : (startBlock + blocksPerSession) - blockNumber;
 
-            // Create the sequential data blocks
-            List<Uint8List> blockBytes =
-                createSequentialDataBlocks(blockNumber, batchSize);
+            List<Uint8List> blockBytes = List.generate(
+                batchSize,
+                (_) => Uint8List.fromList(
+                    [sessionIndex, sessionIndex, sessionIndex, sessionIndex]));
             print(
                 'Writing blocks from $blockNumber to ${blockNumber + batchSize - 1}');
 
-            // Write the batch of 4 blocks
-            await isoTag.writeMultipleBlocks(
+            await isoTag.extendedWriteMultipleBlocks(
               requestFlags: <Iso15693RequestFlag>{
                 Iso15693RequestFlag.highDataRate
               },
@@ -124,15 +191,16 @@ class NfcService {
             );
           }
 
-          await NfcManager.instance
-              .stopSession(alertMessage: "Write Successful");
+          await NfcManager.instance.stopSession(
+              alertMessage: "Session ${sessionIndex + 1} Write Successful");
+          print("Session ${sessionIndex + 1} complete");
         } catch (e) {
-          print(e);
+          print("Error in session ${sessionIndex + 1}: $e");
           await NfcManager.instance
               .stopSession(alertMessage: "Write Failed: $e");
         }
       },
-      alertMessage: "Place a tag on the reader",
+      alertMessage: "Place a tag on the reader for session ${sessionIndex + 1}",
     );
   }
 
