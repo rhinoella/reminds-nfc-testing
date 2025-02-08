@@ -313,7 +313,7 @@ class Iso15693 {
   /// Sends the Extended Fast Read Multiple Blocks command to the tag.
   ///
   /// This uses NFCISO15693Tag#extendedReadSingleBlock API on iOS.
-  Future<Uint8List> extendedFastReadMultipleBlocks(
+  Future<List<Uint8List>> extendedFastReadMultipleBlocks(
       {required Set<Iso15693RequestFlag> requestFlags,
       required int blockNumber,
       required int numberOfBlocks}) async {
