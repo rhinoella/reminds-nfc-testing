@@ -13,10 +13,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class NfcScan extends StatefulWidget {
   @override
-  _NfcScanState createState() => _NfcScanState();
+  _NfcScanStateTest createState() => _NfcScanStateTest();
 }
 
-class _NfcScanState extends State<NfcScan> with SingleTickerProviderStateMixin {
+class _NfcScanStateTest extends State<NfcScan>
+    with SingleTickerProviderStateMixin {
   String _platformVersion = '';
   NFCAvailability _availability = NFCAvailability.not_supported;
   NFCTag? _tag;

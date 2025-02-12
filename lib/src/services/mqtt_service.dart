@@ -1,31 +1,44 @@
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:reminds_flutter/src/interfaces/mqtt_service_interface.dart';
+import 'package:reminds_flutter/src/models/appConfig.dart';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:typed_data/typed_data.dart' as typed;
 import 'package:flutter/services.dart';
 
-class MqttService {
-  final String project = 'ReMINDS1';
-  final MqttQos subscribeQos = MqttQos.atLeastOnce;
-  final MqttQos publishQos = MqttQos.atLeastOnce;
-  final String brokerDomain = 'sapphirewearables.com';
-  final int brokerPort = 8883;
-  final String postCode = 'RG54ZW';
-  final String countryCode = 'GB';
-  final String username = 'NSpitz';
-  final String password = '30011734';
-  final String location = 'a Pharmacy';
-  final String clientId = "noella-test";
-  final String p12Password = "Laudy5^Ak%#eVXqNbqLW";
+class MqttService implements MqttServiceInterface {
+  final AppConfig config;
   MqttServerClient client;
 
-  MqttService()
-      : client = MqttServerClient('sapphirewearables.com', "noella-test");
+  void Function()? _onDisconnectedCallback;
+  void Function(String topic)? _onSubscribedCallback;
+  void Function(typed.Uint8Buffer buffer)? _onMessageRecieved;
+
+  String get uploadTopic => '$config.project/$config.username/upload';
+  String get downloadTopic => '$config.project/$config.username/download';
+
+  typed.Uint8Buffer? _latestMessage;
+
+  typed.Uint8Buffer? get latestMessage => _latestMessage;
+
+  MqttService(this.config)
+      : client = MqttServerClient(config.brokerDomain, config.clientId);
+
+  void setCallbacks(
+      void Function() onDisconnected, void Function(String topic) onConnected) {
+    _onDisconnectedCallback = onDisconnected;
+    _onSubscribedCallback = onConnected;
+  }
+
+  void setMessageRecievedCallback(
+      void Function(typed.Uint8Buffer buffer) onMessageRecieved) {
+    _onMessageRecieved = onMessageRecieved;
+  }
 
   Future<void> connect() async {
     client.setProtocolV311();
     client.secure = true;
-    client.port = brokerPort;
+    client.port = config.brokerPort;
 
     final context = SecurityContext.defaultContext;
     final ByteData certificateData =
@@ -36,7 +49,7 @@ class MqttService {
     context.useCertificateChainBytes(clientCert.buffer.asUint8List());
     context.setTrustedCertificatesBytes(certificateData.buffer.asUint8List());
     context.usePrivateKeyBytes(keyData.buffer.asUint8List(),
-        password: p12Password);
+        password: config.p12Password);
 
     client.keepAlivePeriod = 20;
 
@@ -51,8 +64,8 @@ class MqttService {
     client.onBadCertificate = (Object a) => true;
 
     final connMess = MqttConnectMessage()
-        .authenticateAs(username, password)
-        .withClientIdentifier(clientId)
+        .authenticateAs(config.username, config.password)
+        .withClientIdentifier(config.clientId)
         .startClean(); // Non persistent session for testing
     print('EXAMPLE::Mosquitto client connecting....');
     client.connectionMessage = connMess;
@@ -65,30 +78,45 @@ class MqttService {
       exit(-1);
     }
 
-    final downloadTopic = '$project/$username/download';
-    final uploadTopic = '$project/$username/upload';
+    client.subscribe(downloadTopic, config.subscribeQos);
+    client.subscribe(uploadTopic, config.subscribeQos);
 
-    client.subscribe(downloadTopic, subscribeQos);
-    client.subscribe(uploadTopic, subscribeQos);
+    client.updates!.listen(listenForMessage);
   }
 
   /// The subscribed callback
   void onSubscribed(String topic) {
-    print('EXAMPLE::Subscription confirmed for topic $topic');
+    print("Subscribed");
+    _onSubscribedCallback?.call(topic);
   }
 
   /// The unsolicited disconnect callback
   void onDisconnected() {
-    print('EXAMPLE::OnDisconnected client callback - Client disconnection');
-    if (client.connectionStatus!.disconnectionOrigin ==
-        MqttDisconnectionOrigin.solicited) {
-      print('EXAMPLE::OnDisconnected callback is solicited, this is correct');
-    }
+    _onDisconnectedCallback?.call();
   }
 
   /// The successful connect callback
   void onConnected() {
-    print(
-        'EXAMPLE::OnConnected client callback - Client connection was sucessful');
+    print('OnConnected client callback - Client connection was sucessful');
+  }
+
+  void publishId(String id) {
+    final builder = MqttClientPayloadBuilder();
+    builder.addString(id);
+    client.publishMessage(uploadTopic, config.publishQos, builder.payload!);
+  }
+
+  void publishData(typed.Uint8Buffer buffer) {
+    final builder = MqttClientPayloadBuilder();
+    builder.addBuffer(buffer);
+    client.publishMessage(uploadTopic, config.publishQos, builder.payload!);
+  }
+
+  void listenForMessage(List<MqttReceivedMessage<MqttMessage?>>? c) {
+    final recMess = c![0].payload as MqttPublishMessage;
+    final typed.Uint8Buffer payloadBytes = recMess.payload.message;
+
+    _latestMessage = payloadBytes;
+    _onMessageRecieved?.call(payloadBytes);
   }
 }

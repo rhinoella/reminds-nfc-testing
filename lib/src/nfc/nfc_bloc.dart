@@ -7,7 +7,7 @@ class NfcBloc extends Bloc<NfcEvent, NfcState> {
   final NfcService _nfcService;
 
   NfcBloc(this._nfcService) : super(NfcInitialState()) {
-    on<ReadNfcTagEvent>((event, emit) async {
+    /*on<ReadNfcTagEvent>((event, emit) async {
       try {
         emit(NfcScanningState());
         var tag = await _nfcService.readNfc();
@@ -35,7 +35,7 @@ class NfcBloc extends Bloc<NfcEvent, NfcState> {
       } catch (e) {
         emit(NfcErrorState('Error Filling NFC tag: $e'));
       }
-    });
+    });*/
 
     on<CycleNfcTagEvent>((event, emit) async {
       try {

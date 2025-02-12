@@ -58,7 +58,7 @@ public class SwiftNfcManagerPlugin: NSObject, FlutterPlugin {
     case "Iso15693#writeSingleBlock": handleIso15693WriteSingleBlock(call.arguments as! [String : Any?], result: result)
     case "Iso15693#lockBlock": handleIso15693LockBlock(call.arguments as! [String : Any?], result: result)
     case "Iso15693#readMultipleBlocks": handleIso15693ReadMultipleBlocks(call.arguments as! [String : Any?], result: result)
-    case "Iso15693#extendedFastReadMultipleBlocks": handleIso15693extendedFastReadMultipleBlocks(call.arguments as! [String : Any?], result: result)
+    case "Iso15693#extendedFastReadMultipleBlocks": handleIso15693ExtendedFastReadMultipleBlocks(call.arguments as! [String : Any?], result: result)
     case "Iso15693#writeMultipleBlocks": handleIso15693WriteMultipleBlocks(call.arguments as! [String : Any?], result: result)
     case "Iso15693#getMultipleBlockSecurityStatus": handleIso15693GetMultipleBlockSecurityStatus(call.arguments as! [String : Any?], result: result)
     case "Iso15693#writeAfi": handleIso15693WriteAfi(call.arguments as! [String : Any?], result: result)
@@ -538,16 +538,17 @@ public class SwiftNfcManagerPlugin: NSObject, FlutterPlugin {
   }
 
   @available(iOS 14.0, *)
-  private func handleIso15693extendedFastReadMultipleBlocks(_ arguments: [String : Any?], result: @escaping FlutterResult) {
+  private func handleIso15693ExtendedFastReadMultipleBlocks(_ arguments: [String : Any?], result: @escaping FlutterResult) {
     tagHandler(NFCISO15693Tag.self, arguments, result) { tag in
       let requestFlags = getRequestFlags(arguments["requestFlags"] as! [String])
       let blockNumber = arguments["blockNumber"] as! Int
       let numberOfBlocks = arguments["numberOfBlocks"] as! Int
-      tag.extendedFastReadMultipleBlocks(requestFlags: requestFlags, blockRange: NSMakeRange(blockNumber, numberOfBlocks)) { dataBlock, error in
-        if let error = error {
-          result(getFlutterError(error))
-        } else {
-          result(dataBlock)
+      tag.extendedFastReadMultipleBlocks(requestFlags: requestFlags, blockRange: NSMakeRange(blockNumber, numberOfBlocks)) { resultHandler in
+        switch resultHandler {
+        case .success(let dataBlocks):
+          result(dataBlocks)  // Return data blocks to Flutter
+        case .failure(let error):
+          result(getFlutterError(error))  // Handle error and return to Flutter
         }
       }
     }
