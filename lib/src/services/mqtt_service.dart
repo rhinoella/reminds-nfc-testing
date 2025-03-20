@@ -100,9 +100,9 @@ class MqttService implements MqttServiceInterface {
     print('OnConnected client callback - Client connection was sucessful');
   }
 
-  void publishId(String id) {
+  void publishId(int id) {
     final builder = MqttClientPayloadBuilder();
-    builder.addString(id);
+    builder.addInt(id);
     client.publishMessage(uploadTopic, config.publishQos, builder.payload!);
   }
 

@@ -1,10 +1,5 @@
-import 'dart:ffi';
-
 import 'package:nfc_manager/nfc_manager.dart';
-import 'package:ndef/ndef.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:nfc_manager/platform_tags.dart';
 import 'package:reminds_flutter/src/interfaces/nfc_service_interface.dart';
@@ -15,102 +10,115 @@ class NfcService implements NfcServiceInterface {
   static const totalBlocks = 2048;
   static const totalBytes = 8192;
 
-  Map<int, Uint8List> pageData = {};
-  int currentBlock = 1;
-
+  @override
   Future<List<int>> readCommandBlock(Iso15693 isoTag) async {
-    final firstBlock = await isoTag.readSingleBlock(
+    final commandBlock = await isoTag.readSingleBlock(
         requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
-        blockNumber: 0);
-
-    int commandBlock = firstBlock.first;
+        blockNumber: 44);
 
     // Extract the command (higher 4 bits)
-    int command = (commandBlock >> 4) & 0x0F;
+    int command = commandBlock[0];
 
     // Extract the page number (lower 4 bits)
-    int page = commandBlock & 0x0F;
+    int page = commandBlock[1];
 
     // Return both values in a map
     return [command, page];
   }
 
-  Future<void> writeBlockCommand(Iso15693 isoTag, int blockNumber) async {
-    int commandBlock = (masterCommand << 4) | currentBlock;
-
+  @override
+  Future<void> writeBlockCommand(Iso15693 isoTag, int currentPage) async {
     isoTag.writeSingleBlock(
         requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
-        blockNumber: 0,
-        dataBlock: Uint8List.fromList([commandBlock, 0, 0, 0]));
+        blockNumber: 11,
+        dataBlock: Uint8List.fromList([masterCommand, currentPage, 0, 0]));
   }
 
-  Future<Uint8List> readFullPage(Iso15693 isoTag) async {
-    List<int> fullData = [];
-    const int numberOfBlocks = 64;
-
-    // Read first 64 blocks and omit command
-    var res = await read64Blocks(isoTag, 0);
-
-    fullData
-        .addAll([...res[0].sublist(1), ...res.skip(1).expand((list) => list)]);
-
-    for (var blockNumber = 1;
-        blockNumber < totalBlocks;
-        blockNumber += numberOfBlocks) {
-      // Read the next chunk of blocks
-      var res = await read64Blocks(isoTag, blockNumber);
-
-      fullData.addAll([...res.expand((list) => list)]);
-    }
-
-    return Uint8List.fromList(fullData);
-  }
-
-  Future<List<Uint8List>> read64Blocks(Iso15693 isoTag, int targetBlock) async {
-    final res = await isoTag.readMultipleBlocks(
+  @override
+  Future<Uint8List> readConfigId(Iso15693 isoTag) async {
+    final blocks = await isoTag.readMultipleBlocks(
         requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
-        blockNumber: targetBlock,
-        numberOfBlocks: 64);
+        blockNumber: 15,
+        numberOfBlocks: 4);
 
-    if (res.length != 64) {
-      throw Exception("Error reading tag");
-    }
+    final flattenedBytes = blocks.expand((Uint8List block) => block).toList();
 
-    return res;
+    return Uint8List.fromList(flattenedBytes);
   }
 
-  Future<void> cycleNfc() async {
-    NfcManager.instance.startSession(
-        pollingOptions: <NfcPollingOption>{NfcPollingOption.iso15693},
-        onDiscovered: (NfcTag tag) async {
-          try {
-            Iso15693? isoTag = Iso15693.from(tag);
+  @override
+  Future<void> writeJson(NfcTag tag, Uint8List payload) async {
+    final ndef = Ndef.from(tag);
 
-            if (isoTag == null) {
-              throw Exception("Tag is not compatible with iso");
-            }
+    if (ndef == null) {
+      throw Exception("Tag is not NDEF compatible");
+    }
+    if (!ndef.isWritable) {
+      throw Exception("Tag is not writable");
+    }
 
-            for (var currentPage = 0; currentPage < 5; currentPage++) {
-              await writeBlockCommand(isoTag, currentBlock);
-              int commandBlock = 0;
+    final message = NdefMessage([
+      NdefRecord.createMime(
+        'application/json',
+        payload, // Convert your Uint8Buffer to a List<int>
+      ),
+    ]);
+    await ndef.write(message);
+  }
 
-              /*while (commandBlock != slaveCommand) {
-              final commandRead = await readCommandBlock(isoTag);
-              commandBlock = commandRead.first;
+  @override
+  Future<NfcReadData> cycleNfc(NfcTag tag) async {
+    Map<int, Uint8List> pageData = {};
 
-              if (commandBlock == slaveCommand && commandRead[1] == currentPage) {
-                break;
-              }
-            }*/
+    final isoTag = Iso15693.from(tag);
+    final ndef = Ndef.from(tag);
 
-              final result = await readFullPage(isoTag);
-              pageData[currentPage] = result;
-            }
+    if (ndef == null || isoTag == null) {
+      throw Exception("Tag is not compatible.");
+    }
 
-            print(pageData);
-          } catch (e) {
-            print('e');
-          }
-        });
+    final configId = await readConfigId(isoTag);
+
+    final message = await ndef.read();
+
+    final allPayloads = message.records
+        .map((record) => record.payload)
+        .expand((payload) => payload)
+        .toList();
+    final combinedPayload = Uint8List.fromList(allPayloads);
+
+    pageData[0] = combinedPayload;
+
+    for (var currentPage = 1; currentPage < 6; currentPage++) {
+      await writeBlockCommand(isoTag, currentPage);
+      int commandBlock = 0;
+      const maxIterations = 100;
+      int iterations = 0;
+
+      while (commandBlock != slaveCommand) {
+        final commandRead = await readCommandBlock(isoTag);
+        commandBlock = commandRead.first;
+
+        if (commandBlock == slaveCommand && commandRead[1] == currentPage) {
+          break;
+        }
+
+        iterations++;
+        if (iterations > maxIterations) {
+          throw Exception("Max iterations reached");
+        }
+      }
+
+      final message = await ndef.read();
+
+      final allPayloads = message.records
+          .map((record) => record.payload)
+          .expand((payload) => payload)
+          .toList();
+      final combinedPayload = Uint8List.fromList(allPayloads);
+      pageData[currentPage] = combinedPayload;
+    }
+
+    return NfcReadData(configId: configId, pageData: pageData);
   }
 }

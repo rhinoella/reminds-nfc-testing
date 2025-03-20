@@ -7,14 +7,17 @@
 			"Firmware_ID": 4,
 			"currDate": [
 				24,
-				4,
-				16
+				12,
+				4
 			],
 			"currTime": [
-				18,
-				0,
+				16,
+				50,
 				0
 			],
+			"interruptPeriod": "minute",
+			"printText": 1,
+			"boardMem": "NFC",
 			"encryptionCert": "S30G2H3y34GVGi6FG876ghYbNm74X3v1"
 		},
 		"medinfo": {
@@ -27,27 +30,27 @@
 			]
 		},
 		"sensorSettings": {
-			"ConfigID": "4at60",
+			"ConfigID": "MedTest-M",
 			"temperature": {
 				"active": 1,
 				"recCon": 2,
-				"threshold1": 0,
+				"threshold1": -10,
 				"threshold2": 60,
-				"sampleRate": 60
+				"sampleRate": 45
 			},
 			"SHT40temperature": {
 				"active": 1,
 				"recCon": 2,
-				"threshold1": 0,
-				"threshold2": 60,
-				"sampleRate": 60
+				"threshold1": -40,
+				"threshold2": 125,
+				"sampleRate": 30
 			},
 			"SHT40humidity": {
 				"active": 1,
 				"recCon": 2,
 				"threshold1": 0,
-				"threshold2": 60,
-				"sampleRate": 60
+				"threshold2": 100,
+				"sampleRate": 30
 			},
 			"pressure": {
 				"active": 1,
@@ -57,10 +60,10 @@
 				"sampleRate": 60
 			},
 			"luminosity": {
-				"active": 1,
+				"active": 0,
 				"recCon": 4,
 				"threshold1": 0,
-				"sampleRate": 60
+				"sampleRate": 900
 			},
 			"imuacc": {
 				"active": 0,

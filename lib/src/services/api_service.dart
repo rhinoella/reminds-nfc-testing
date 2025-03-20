@@ -5,9 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:reminds_flutter/config.dart';
 import 'package:reminds_flutter/src/interfaces/api_service_interface.dart';
 import 'package:reminds_flutter/src/models/appConfig.dart';
+import 'dart:typed_data';
 
 class ApiService implements ApiServiceInterface {
+  @override
   final String apiUrl;
+  @override
   final String deviceId;
 
   Map<String, String> get _headers => {
@@ -41,15 +44,16 @@ class ApiService implements ApiServiceInterface {
     }
   }
 
-  Future<String> registerMedication() async {
+  @override
+  Future<int> registerMedication() async {
     if (mode == 'dev') {
-      return "1234";
+      return 1234;
     }
 
     try {
       // Sending POST request
-      final response = await http.post(
-        Uri.parse(apiUrl),
+      final response = await http.put(
+        Uri.parse('$apiUrl/medication'),
         headers: _headers,
       );
 
@@ -69,6 +73,7 @@ class ApiService implements ApiServiceInterface {
     }
   }
 
+  @override
   Future<AppConfig> getConfig() async {
     if (mode == "dev") {
       return AppConfig.dev();
@@ -76,7 +81,7 @@ class ApiService implements ApiServiceInterface {
 
     // Sending POST request
     final response = await http.get(
-      Uri.parse(apiUrl),
+      Uri.parse('$apiUrl/config'),
       headers: _headers,
     );
 
@@ -92,6 +97,30 @@ class ApiService implements ApiServiceInterface {
     } else {
       print('Request failed with status: ${response.statusCode}');
       throw Exception('Failed to load config');
+    }
+  }
+
+  @override
+  Future<bool> returnMedication(int medicationId, Uint8List sensorData) async {
+    if (mode == "dev") {
+      return true;
+    }
+
+    // Sending POST request
+    final response = await http.post(
+      Uri.parse('$apiUrl/medication'),
+      headers: _headers,
+      body: json.encode({
+        'medicationId': medicationId,
+        'sensorData': sensorData,
+      }),
+    );
+
+    // Check if the response status code is 200
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      return false;
     }
   }
 }

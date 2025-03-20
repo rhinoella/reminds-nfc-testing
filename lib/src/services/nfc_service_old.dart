@@ -1,4 +1,4 @@
-import 'dart:ffi';
+/*import 'dart:ffi';
 
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:ndef/ndef.dart';
@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:nfc_manager/platform_tags.dart';
+import 'dart:typed_data' as typed;
 
 // Amount of blocks of 4 bytes in an 8K-byte nfc
 const totalBlocks = 2048;
@@ -272,5 +273,91 @@ class NfcService {
     return dataBlocks;
   }
 
+  Future<Uint8List> readFullPage(Iso15693 isoTag) async {
+    List<int> fullData = [];
+    const int numberOfBlocks = 64;
+
+    // Read first 64 blocks and omit command
+    var res = await read64Blocks(isoTag, 0);
+
+    fullData
+        .addAll([...res[0].sublist(1), ...res.skip(1).expand((list) => list)]);
+
+    for (var blockNumber = 1;
+        blockNumber < totalBlocks;
+        blockNumber += numberOfBlocks) {
+      // Read the next chunk of blocks
+      var res = await read64Blocks(isoTag, blockNumber);
+
+      fullData.addAll([...res.expand((list) => list)]);
+    }
+
+    return Uint8List.fromList(fullData);
+  }
+
+  Future<List<Uint8List>> read64Blocks(Iso15693 isoTag, int targetBlock) async {
+    final res = await isoTag.readMultipleBlocks(
+        requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
+        blockNumber: targetBlock,
+        numberOfBlocks: 64);
+
+    if (res.length != 64) {
+      throw Exception("Error reading tag");
+    }
+
+    return res;
+  }
+
+  @override
+  Future<void> writeBytes(typed.Uint8Buffer buffer, Iso15693 isoTag,
+      {int startBlock = 0}) async {
+    int byteLength = buffer.lengthInBytes;
+    print('BYTE LENGTH $byteLength');
+    int blockSize = 4; // 4 bytes per block
+    int blocksPerWrite = 4; // Max 4 blocks per write operation
+    int totalBlocks = (byteLength / blockSize).ceil();
+
+    for (var blockNumber = startBlock;
+        blockNumber < totalBlocks;
+        blockNumber += blocksPerWrite) {
+      // Determine how many blocks can be written in this batch
+      int remainingBlocks = totalBlocks - blockNumber;
+      int blocksToWrite =
+          remainingBlocks >= blocksPerWrite ? blocksPerWrite : remainingBlocks;
+
+      List<Uint8List> dataBlocks = [];
+
+      for (var i = 0; i < blocksToWrite; i++) {
+        int start = (blockNumber + i) * blockSize;
+        if (start >= byteLength) break; // Prevent out-of-bounds error
+        List<int> subList =
+            buffer.sublist(start, (start + blockSize).clamp(0, byteLength));
+
+        // If the block is not complete, pad it with zeros.
+        if (subList.length < blockSize) {
+          subList = List<int>.from(subList)
+            ..addAll(List.filled(blockSize - subList.length, 0));
+        }
+
+        Uint8List dataBlock = Uint8List.fromList(subList);
+
+        dataBlocks.add(dataBlock);
+      }
+
+      print(
+          'Writing blocks $blockNumber to ${blockNumber + dataBlocks.length}');
+
+      if (dataBlocks.isNotEmpty) {
+        await isoTag.extendedWriteMultipleBlocks(
+          requestFlags: {Iso15693RequestFlag.highDataRate},
+          blockNumber: blockNumber,
+          numberOfBlocks: dataBlocks.length,
+          dataBlocks: dataBlocks,
+        );
+      }
+    }
+  }
+
   Future<void> cycleNfc() async {}
 }
+*/

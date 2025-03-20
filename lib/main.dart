@@ -10,7 +10,6 @@ import 'package:reminds_flutter/src/services/api_service.dart';
 import 'package:reminds_flutter/src/services/mocks/api_service_mock.dart';
 import 'package:reminds_flutter/src/services/mocks/mqtt_service_mock.dart';
 import 'package:reminds_flutter/src/services/mqtt_service.dart';
-import 'package:reminds_flutter/src/services/nfc_service.dart';
 import 'package:reminds_flutter/src/widgets/failure_screen.dart';
 import 'package:reminds_flutter/src/widgets/loading.dart';
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:reminds_flutter/config.dart';
 import 'package:reminds_flutter/src/dispense/dispense.dart';
 import 'package:reminds_flutter/src/main/main_bloc.dart';
+import 'package:reminds_flutter/src/return/return.dart';
 
 class RemindsMain extends StatelessWidget {
   @override
@@ -62,7 +64,13 @@ class RemindsMain extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity, // Make the button fill width
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ReturnScreen()),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -85,6 +93,46 @@ class RemindsMain extends StatelessWidget {
                   ),
                 ),
               ),
+              if (mode == "dev")
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 40),
+                    child: SizedBox(
+                        width: double.infinity,
+                        child: Column(children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => ReturnScreen()),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text("Fill NFC"),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => ReturnScreen()),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text("Read NFC"),
+                          )
+                        ])),
+                  ),
+                )
             ],
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:reminds_flutter/src/models/appConfig.dart';
+import 'dart:typed_data';
 
 abstract class ApiServiceInterface {
   final String apiUrl;
@@ -9,7 +10,9 @@ abstract class ApiServiceInterface {
   // Private constructor
   ApiServiceInterface._(this.apiUrl, this.deviceId);
 
-  Future<String> registerMedication();
+  Future<int> registerMedication();
 
   Future<AppConfig> getConfig();
+
+  Future<bool> returnMedication(int medicationId, Uint8List sensorData);
 }

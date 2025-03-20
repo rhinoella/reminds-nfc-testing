@@ -67,6 +67,8 @@ flutter:
     - assets/cert/client.crt
     - assets/cert/ca.crt
     - assets/cert/client.key
+    - assets/data/jsonData.json
+
 
   uses-material-design: true
 

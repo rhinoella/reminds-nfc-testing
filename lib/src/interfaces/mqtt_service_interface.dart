@@ -39,9 +39,9 @@ abstract class MqttServiceInterface {
 
   void onDisconnected();
 
-  void publishId(String id);
+  void publishId(int id);
 
-  void publishData(typed.Uint8Buffer buffer);
+  void publishData(typed.Uint8Buffer data);
 
   void listenForMessage(List<MqttReceivedMessage<MqttMessage?>>? c);
 }

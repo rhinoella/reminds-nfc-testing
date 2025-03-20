@@ -1,11 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:http/http.dart' as http;
-import 'package:reminds_flutter/config.dart';
 import 'package:reminds_flutter/src/interfaces/api_service_interface.dart';
 import 'package:reminds_flutter/src/models/appConfig.dart';
-import 'package:reminds_flutter/src/services/api_service.dart';
+import 'dart:typed_data';
 
 class ApiServiceMock implements ApiServiceInterface {
   final String apiUrl;
@@ -24,11 +19,15 @@ class ApiServiceMock implements ApiServiceInterface {
     return ApiServiceMock._(apiUrl, "fakeDeviceId");
   }
 
-  Future<String> registerMedication() async {
-    return "1234";
+  Future<int> registerMedication() async {
+    return 1234;
   }
 
   Future<AppConfig> getConfig() async {
     return AppConfig.dev();
+  }
+
+  Future<bool> returnMedication(int medicationId, Uint8List sensorData) async {
+    return true;
   }
 }

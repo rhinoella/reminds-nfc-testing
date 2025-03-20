@@ -3,10 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:reminds_flutter/src/dispense/dispense_nfc.dart';
 import 'package:reminds_flutter/src/interfaces/api_service_interface.dart';
 import 'package:reminds_flutter/src/interfaces/mqtt_service_interface.dart';
+import 'package:reminds_flutter/src/services/nfc_service.dart';
 import 'package:typed_data/typed_data.dart' as typed;
-import 'package:reminds_flutter/src/services/api_service.dart';
-import 'package:reminds_flutter/src/services/mqtt_service.dart';
-import 'package:reminds_flutter/src/services/nfc_service_old.dart';
+import 'dart:typed_data';
 
 class DispenseScreen extends StatefulWidget {
   @override
@@ -18,8 +17,8 @@ class _DispenseScreenState extends State<DispenseScreen> {
   late MqttServiceInterface mqttService;
   late ApiServiceInterface apiService;
   NfcService nfcService = NfcService();
-  String? medicationId; // Store the received ID from API
-  typed.Uint8Buffer? _jsonData;
+  int? medicationId; // Store the received ID from API
+  typed.Uint8Buffer? _initData;
 
   @override
   void initState() {
@@ -31,7 +30,8 @@ class _DispenseScreenState extends State<DispenseScreen> {
   }
 
   void handleMqttMessage(typed.Uint8Buffer buffer) {
-    _jsonData = buffer;
+    _initData = buffer;
+
     setState(() {
       isReadyForScan = true;
     });
@@ -58,6 +58,14 @@ class _DispenseScreenState extends State<DispenseScreen> {
     }
   }
 
+  void onDispenseSuccess() {
+    Navigator.pop(context);
+  }
+
+  void onDispenseFailure() {
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,8 +77,11 @@ class _DispenseScreenState extends State<DispenseScreen> {
         backgroundColor: Colors.purple,
       ),
       body: Center(
-          child: isReadyForScan
-              ? DispenseNfc()
+          child: isReadyForScan && _initData != null
+              ? DispenceNfc(
+                  initData: _initData!,
+                  onFailure: onDispenseFailure,
+                  onSuccess: onDispenseSuccess)
               : const CircularProgressIndicator() // Show loading while waiting for API response
           ),
     );

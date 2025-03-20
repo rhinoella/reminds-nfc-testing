@@ -1,12 +1,14 @@
-import 'dart:ffi';
-
-import 'package:nfc_manager/nfc_manager.dart';
-import 'package:ndef/ndef.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:nfc_manager/platform_tags.dart';
+import 'package:nfc_manager/nfc_manager.dart';
+
+class NfcReadData {
+  final Uint8List configId;
+  final Map<int, Uint8List> pageData;
+
+  NfcReadData({required this.configId, required this.pageData});
+}
 
 abstract class NfcServiceInterface {
   static const int masterCommand = 0x01;
@@ -14,16 +16,13 @@ abstract class NfcServiceInterface {
   static const totalBlocks = 2048;
   static const totalBytes = 8192;
 
-  Map<int, Uint8List> pageData = {};
-  int currentBlock = 1;
-
   Future<List<int>> readCommandBlock(Iso15693 isoTag);
 
-  Future<void> writeBlockCommand(Iso15693 isoTag, int blockNumber);
+  Future<void> writeBlockCommand(Iso15693 isoTag, int currentPage);
 
-  Future<Uint8List> readFullPage(Iso15693 isoTag);
+  Future<Uint8List> readConfigId(Iso15693 isoTag);
 
-  Future<List<Uint8List>> read64Blocks(Iso15693 isoTag, int targetBlock);
+  Future<void> writeJson(NfcTag tag, Uint8List payload);
 
-  Future<void> cycleNfc();
+  Future<NfcReadData> cycleNfc(NfcTag tag);
 }
