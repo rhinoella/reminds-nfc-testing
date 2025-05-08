@@ -5,7 +5,6 @@ import 'package:nfc_manager/platform_tags.dart';
 import 'package:reminds_flutter/src/interfaces/nfc_service_interface.dart';
 
 class NfcService implements NfcServiceInterface {
-  static const int masterCommand = 0x01;
   static const int slaveCommand = 0x02;
   static const totalBlocks = 2048;
   static const totalBytes = 8192;
@@ -13,36 +12,34 @@ class NfcService implements NfcServiceInterface {
   @override
   Future<List<int>> readCommandBlock(Iso15693 isoTag) async {
     final commandBlock = await isoTag.readSingleBlock(
-        requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
-        blockNumber: 44);
+      requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
+      blockNumber: 44,
+    );
 
-    // Extract the command (higher 4 bits)
-    int command = commandBlock[0];
+    int command = commandBlock[1]; // 0x02 = read command
+    int page = commandBlock[2]; // page number
 
-    // Extract the page number (lower 4 bits)
-    int page = commandBlock[1];
-
-    // Return both values in a map
     return [command, page];
   }
 
   @override
   Future<void> writeBlockCommand(Iso15693 isoTag, int currentPage) async {
-    isoTag.writeSingleBlock(
-        requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
-        blockNumber: 11,
-        dataBlock: Uint8List.fromList([masterCommand, currentPage, 0, 0]));
+    await isoTag.writeSingleBlock(
+      requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
+      blockNumber: 44,
+      dataBlock: Uint8List.fromList([0xFA, 0x02, currentPage]),
+    );
   }
 
   @override
   Future<Uint8List> readConfigId(Iso15693 isoTag) async {
     final blocks = await isoTag.readMultipleBlocks(
-        requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
-        blockNumber: 15,
-        numberOfBlocks: 4);
+      requestFlags: <Iso15693RequestFlag>{Iso15693RequestFlag.highDataRate},
+      blockNumber: 15,
+      numberOfBlocks: 4,
+    );
 
     final flattenedBytes = blocks.expand((Uint8List block) => block).toList();
-
     return Uint8List.fromList(flattenedBytes);
   }
 
@@ -60,7 +57,7 @@ class NfcService implements NfcServiceInterface {
     final message = NdefMessage([
       NdefRecord.createMime(
         'application/json',
-        payload, // Convert your Uint8Buffer to a List<int>
+        payload,
       ),
     ]);
     await ndef.write(message);

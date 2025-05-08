@@ -68,6 +68,7 @@ flutter:
     - assets/cert/ca.crt
     - assets/cert/client.key
     - assets/data/jsonData.json
+    - assets/data/dataActualFlashSett-4.bin
 
 
   uses-material-design: true
