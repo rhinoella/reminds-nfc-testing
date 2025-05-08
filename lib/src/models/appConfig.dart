@@ -1,7 +1,7 @@
 import 'package:mqtt_client/mqtt_client.dart';
 
 class AppConfig {
-  final mode = "DEV";
+  final mode = "prod";
 
   final String project;
   final MqttQos subscribeQos;
@@ -15,6 +15,8 @@ class AppConfig {
   final String location;
   final String clientId;
   final String p12Password;
+  final String sslCertificate;
+  final String sslKey;
 
   // Constructor
   AppConfig({
@@ -30,6 +32,8 @@ class AppConfig {
     required this.location,
     required this.clientId,
     required this.p12Password,
+    required this.sslCertificate,
+    required this.sslKey,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> json) {
@@ -46,6 +50,8 @@ class AppConfig {
       location: json['location'] as String,
       clientId: json['clientId'] as String,
       p12Password: json['p12Password'] as String,
+      sslCertificate: json['sslCertificate'] as String,
+      sslKey: json['sslKey'] as String,
     );
   }
 
@@ -61,5 +67,7 @@ class AppConfig {
         password = "30011734",
         location = "Test Location",
         clientId = "noella-test",
-        p12Password = "Laudy5^Ak%#eVXqNbqLW";
+        p12Password = "Laudy5^Ak%#eVXqNbqLW",
+        sslCertificate = "",
+        sslKey = "";
 }

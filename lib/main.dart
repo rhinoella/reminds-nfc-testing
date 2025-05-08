@@ -44,6 +44,8 @@ class _MainAppState extends State<MainApp> {
       _connectionFailed = false;
     });
 
+    print("Initializing app in '$mode' mode, API URL: $apiUrl");
+
     apiService = mode == "dev"
         ? await ApiServiceMock.create(apiUrl)
         : await ApiService.create(apiUrl);
@@ -52,11 +54,20 @@ class _MainAppState extends State<MainApp> {
       config = await apiService.getConfig();
       await _connectToMqtt();
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isConnected = false;
-          _connectionFailed = true;
-        });
+      print("Error fetching config: $e");
+      // Provide a fallback config if API call fails
+      config = AppConfig.dev();
+
+      try {
+        await _connectToMqtt();
+      } catch (mqttError) {
+        print("Error connecting to MQTT: $mqttError");
+        if (mounted) {
+          setState(() {
+            _isConnected = false;
+            _connectionFailed = true;
+          });
+        }
       }
     }
   }
@@ -95,7 +106,7 @@ class _MainAppState extends State<MainApp> {
         Provider<ApiServiceInterface>(create: (_) => apiService),
       ], child: MaterialApp(home: RemindsMain()));
     } else if (_connectionFailed) {
-      return MaterialApp(home: FailureScreen(onRetry: _connectToMqtt));
+      return MaterialApp(home: FailureScreen(onRetry: _initApp));
     } else {
       return MaterialApp(home: LoadingScreen());
     }

@@ -37,12 +37,14 @@ dependencies:
   cupertino_icons: ^1.0.8
   mqtt_client: ^10.5.1
   provider: ^6.1.2
-  flutter_nfc_kit: ^3.5.2
   nfc_manager:
     path: 'deps/flutter-nfc-manager'
   flutter_bloc: ^8.1.6
   http: ^1.3.0
   device_info_plus: ^9.0.0
+  ndef: ^0.3.3
+  video_player: ^2.8.2
+  chewie: ^1.7.5
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -65,7 +67,6 @@ flutter:
   # the material Icons class.
   assets:
     - assets/cert/client.crt
-    - assets/cert/ca.crt
     - assets/cert/client.key
     - assets/data/jsonData.json
     - assets/data/dataActualFlashSett-4.bin

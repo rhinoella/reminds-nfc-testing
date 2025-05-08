@@ -4,6 +4,7 @@ import 'package:reminds_flutter/src/dispense/dispense_nfc.dart';
 import 'package:reminds_flutter/src/interfaces/api_service_interface.dart';
 import 'package:reminds_flutter/src/interfaces/mqtt_service_interface.dart';
 import 'package:reminds_flutter/src/services/nfc_service.dart';
+import 'package:reminds_flutter/src/screens/survey_screen.dart';
 import 'package:typed_data/typed_data.dart' as typed;
 import 'dart:typed_data';
 
@@ -59,7 +60,11 @@ class _DispenseScreenState extends State<DispenseScreen> {
   }
 
   void onDispenseSuccess() {
-    Navigator.pop(context);
+    // Navigate to the survey screen instead of just popping
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const SurveyScreen()),
+    );
   }
 
   void onDispenseFailure() {

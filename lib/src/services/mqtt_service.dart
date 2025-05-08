@@ -3,6 +3,8 @@ import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:reminds_flutter/src/interfaces/mqtt_service_interface.dart';
 import 'package:reminds_flutter/src/models/appConfig.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:typed_data/typed_data.dart' as typed;
 import 'package:flutter/services.dart';
 
@@ -14,8 +16,8 @@ class MqttService implements MqttServiceInterface {
   void Function(String topic)? _onSubscribedCallback;
   void Function(typed.Uint8Buffer buffer)? _onMessageRecieved;
 
-  String get uploadTopic => '$config.project/$config.username/upload';
-  String get downloadTopic => '$config.project/$config.username/download';
+  String get uploadTopic => '${config.project}/${config.username}/upload';
+  String get downloadTopic => '${config.project}/${config.username}/download';
 
   typed.Uint8Buffer? _latestMessage;
 
@@ -40,16 +42,25 @@ class MqttService implements MqttServiceInterface {
     client.secure = true;
     client.port = config.brokerPort;
 
-    final context = SecurityContext.defaultContext;
-    final ByteData certificateData =
-        await rootBundle.load('assets/cert/ca.crt');
-    final ByteData keyData = await rootBundle.load('assets/cert/client.key');
-    final ByteData clientCert = await rootBundle.load('assets/cert/client.crt');
+    // Create a new security context
+    final SecurityContext context = SecurityContext.defaultContext;
 
-    context.useCertificateChainBytes(clientCert.buffer.asUint8List());
-    context.setTrustedCertificatesBytes(certificateData.buffer.asUint8List());
-    context.usePrivateKeyBytes(keyData.buffer.asUint8List(),
-        password: config.p12Password);
+    try {
+      // Handle client certificate and key
+      if (config.sslCertificate.isNotEmpty && config.sslKey.isNotEmpty) {
+        // Convert certificate and key from PEM strings to bytes
+        final certBytes = utf8.encode(config.sslCertificate);
+        final keyBytes = utf8.encode(config.sslKey);
+
+        // Use the certificate and key for client authentication
+        context.useCertificateChainBytes(certBytes);
+        context.usePrivateKeyBytes(keyBytes, password: config.p12Password);
+
+        client.securityContext = context;
+      }
+    } catch (e) {
+      print('Error setting up security context: $e');
+    }
 
     client.keepAlivePeriod = 20;
 
@@ -61,7 +72,10 @@ class MqttService implements MqttServiceInterface {
 
     client.onSubscribed = onSubscribed;
 
-    client.onBadCertificate = (Object a) => true;
+    client.onBadCertificate = (Object a) {
+      print('Bad certificate: $a');
+      return true; // Accept bad certificates
+    };
 
     final connMess = MqttConnectMessage()
         .authenticateAs(config.username, config.password)
@@ -72,32 +86,40 @@ class MqttService implements MqttServiceInterface {
 
     try {
       await client.connect();
+      print('Connected to MQTT broker');
     } on Exception catch (e) {
-      print('EXAMPLE::client exception - $e');
+      print('MQTT connection exception - $e');
       client.disconnect();
-      exit(-1);
+      return; // Don't exit the app, just return from the function
     }
 
-    client.subscribe(downloadTopic, config.subscribeQos);
-    client.subscribe(uploadTopic, config.subscribeQos);
-
-    client.updates!.listen(listenForMessage);
+    if (client.connectionStatus!.state == MqttConnectionState.connected) {
+      print('MQTT client connected');
+      client.subscribe(downloadTopic, config.subscribeQos);
+      client.subscribe(uploadTopic, config.subscribeQos);
+      client.updates!.listen(listenForMessage);
+    } else {
+      print(
+          'MQTT client connection failed - status: ${client.connectionStatus}');
+      client.disconnect();
+    }
   }
 
   /// The subscribed callback
   void onSubscribed(String topic) {
-    print("Subscribed");
+    print("Subscribed to topic: $topic");
     _onSubscribedCallback?.call(topic);
   }
 
   /// The unsolicited disconnect callback
   void onDisconnected() {
+    print('MQTT client disconnected');
     _onDisconnectedCallback?.call();
   }
 
   /// The successful connect callback
   void onConnected() {
-    print('OnConnected client callback - Client connection was sucessful');
+    print('OnConnected client callback - Client connection was successful');
   }
 
   void publishId(int id) {

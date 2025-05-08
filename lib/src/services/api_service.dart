@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:reminds_flutter/config.dart';
 import 'package:reminds_flutter/src/interfaces/api_service_interface.dart';
 import 'package:reminds_flutter/src/models/appConfig.dart';
+import 'package:reminds_flutter/src/models/survey.dart';
+import 'package:reminds_flutter/src/models/survey_submission.dart';
 import 'dart:typed_data';
 
 class ApiService implements ApiServiceInterface {
@@ -24,6 +26,7 @@ class ApiService implements ApiServiceInterface {
   // Factory method to create an instance of ApiService
   static Future<ApiService> create(String apiUrl) async {
     final deviceId = await _getDeviceId();
+    print("Device ID: $deviceId");
     return ApiService._(apiUrl, deviceId);
   }
 
@@ -78,17 +81,20 @@ class ApiService implements ApiServiceInterface {
     if (mode == "dev") {
       return AppConfig.dev();
     }
-
     // Sending POST request
     final response = await http.get(
-      Uri.parse('$apiUrl/config'),
+      Uri.parse('$apiUrl/config?deviceId=$deviceId'),
       headers: _headers,
     );
+
+    print("RESPONSE: $response");
 
     // Check if the response status code is 200
     if (response.statusCode == 200) {
       // If the response is successful, parse it as JSON
       Map<String, dynamic> jsonResponse = json.decode(response.body);
+
+      print("JSON RESPONSE: $jsonResponse");
 
       // Convert the JSON response into the AppConfig model
       AppConfig config = AppConfig.fromJson(jsonResponse);
@@ -121,6 +127,67 @@ class ApiService implements ApiServiceInterface {
       return true;
     } else {
       return false;
+    }
+  }
+
+  @override
+  Future<Survey> getSurvey() async {
+    if (mode == 'dev') {
+      return Survey(
+        title: 'Test Survey',
+        questions: [
+          SurveyQuestion(
+            id: '1',
+            question: 'Test Question',
+            options: ['Option 1', 'Option 2'],
+          ),
+        ],
+        videoLink: 'https://example.com/video',
+      );
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$apiUrl/survey'),
+        headers: _headers,
+      );
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = json.decode(response.body);
+        return Survey.fromJson(jsonResponse);
+      } else {
+        throw Exception('Failed to load survey: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error occurred while fetching survey: $e');
+    }
+  }
+
+  @override
+  Future<SurveySubmission> submitSurvey(SurveySubmission submission) async {
+    if (mode == 'dev') {
+      return SurveySubmission(
+        id: '123',
+        answers: submission.answers,
+        submittedAt: DateTime.now(),
+      );
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$apiUrl/survey-submissions'),
+        headers: _headers,
+        body: json.encode(submission.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = json.decode(response.body);
+        return SurveySubmission.fromJson(jsonResponse);
+      } else {
+        throw Exception('Failed to submit survey: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error occurred while submitting survey: $e');
     }
   }
 }
